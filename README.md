@@ -1,5 +1,5 @@
 # ClipImageProcessorDiff
-Differentiable implementation of the ClipImageProcessor
+Differentiable implementation of the ClipImageProcessor. Useful for running adversarial attacks on models using the ClipImageProcessor
 
 Config used: 
 https://huggingface.co/Intel/llava-gemma-2b/blob/main/preprocessor_config.json
