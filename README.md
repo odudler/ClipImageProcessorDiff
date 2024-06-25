@@ -1,0 +1,2 @@
+# ClipImageProcessorDiff
+Differentiable implementation of the ClipImageProcessor
