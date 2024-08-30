@@ -1,3 +1,10 @@
+
+import math
+import numpy as np
+from utils import *
+from PIL import Image
+
+
 class _ClipImageProcessor:
     """
         Imperfect differentiable reconstruction of ClipImageProcessor
@@ -49,6 +56,84 @@ class _ClipImageProcessor:
         do_normalize = True,
         image_mean = [0.48145466, 0.4578275, 0.40821073],
         image_std = [0.26862954, 0.26130258, 0.27577711],
+        do_convert_rgb = True
+    ):
+        self.size = size
+        self.std = image_std
+        self.mean = image_mean
+        self.rescale_factor = rescale_factor
+        self.do_resize = do_resize
+        self.resample = resample
+        self.do_center_crop = do_center_crop
+        self.crop_size = crop_size
+        self.do_rescale = do_rescale
+        self.do_normalize = do_normalize
+        self.do_convert_rgb = do_convert_rgb
+
+        self.device = DEVICE
+        
+
+    def __call__(self, img):
+        if self.do_resize:
+            #Resize to smaller dimension equalling required dimension, and aspect ratio being conserved
+            _, height, width = img.size()
+            short, long = (width, height) if width <= height else (height, width)
+            new_short, new_long = self.size, int(self.size * long / short)
+
+            if width <= height:
+                height, width = new_long, new_short
+            else:
+                height, width = new_short, new_long
+            
+            img = img.unsqueeze(0)
+            img = F.interpolate(img, size=(height, width), mode=self.resample, antialias=True, align_corners=False)
+            img = img.squeeze(0)
+
+        #do_center_crop
+        if self.do_center_crop:
+            if width < height:
+                new_size = width
+                left = 0
+                top = (height - new_size) // 2
+            else:
+                new_size = height
+                left = (width - new_size) // 2
+                top = 0
+
+            right = left + new_size
+            bottom = top + new_size
+
+            img = img[:, top:bottom, left:right]
+
+        img = img.clamp(min=0, max=255)
+
+        #rescale
+        if self.do_rescale:
+            img = img * self.rescale_factor
+
+        #normalize
+        if self.do_normalize:
+            mean = torch.tensor(self.mean).view(3, 1, 1).to(self.device)
+            std = torch.tensor(self.std).view(3, 1, 1).to(self.device)
+            img = (img - mean) / std
+
+        return img
+    
+
+
+class _SiglipImageProcessor:
+    def __init__(
+        self,
+        do_resize = True,
+        size = 384, #Simplified to Int in this case, for the shortest_edge attribute
+        resample = 'bicubic', #Also referred to with Int "3"
+        do_center_crop = True,
+        crop_size = None,
+        do_rescale = True,
+        rescale_factor = 1 / 255,
+        do_normalize = True,
+        image_mean = [0.5, 0.5, 0.5],
+        image_std = [0.5, 0.5, 0.5],
         do_convert_rgb = True
     ):
         self.size = size
